@@ -4,14 +4,15 @@ import asyncio
 import os
 import subprocess
 import yaml
-import logging
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
-from slack import RTMClient
 from slack.errors import SlackApiError
 
-rtm_client = None
+from mebot.options import cli_args
+from mebot.slack_clients.Client import Client
+
+SLACK_CLIENT = Client("RTMClient")
 app = FastAPI()
 class SlackMessage(BaseModel):
     channel: str
@@ -23,7 +24,7 @@ slack_token = yaml.load(subprocess.check_output(
     cwd=os.environ["TP_HOME"]), Loader=yaml.FullLoader)["capabiliti_bot"]["bot_token"]
 
 
-@RTMClient.run_on(event='message')
+@SLACK_CLIENT.on(event='message')
 async def say_hello(**payload):
     data = payload['data']
     web_client = payload['web_client']
@@ -47,24 +48,19 @@ async def say_hello(**payload):
             print(f"Got an error: {e.response['error']}")
 
 @app.on_event('startup')
-async def boot_rtm():
-    global rtm_client
-    rtm_client = RTMClient(token=slack_token, run_async=True, loop=asyncio.get_running_loop())
-    old_name = os.name
-    os.name = 'nt'
-    rtm_client.start()
-    os.name = old_name
+async def boot_slack():
+    SLACK_CLIENT.start(token=slack_token)
 
 @app.on_event('shutdown')
-async def shutdown_rtm():
-    await rtm_client.async_stop()
+async def shutdown_slack():
+    await SLACK_CLIENT.stop()
 
 @app.post('/msg')
 async def send_to_slack(slack_message: SlackMessage):
     channel = slack_message.channel
     msg = slack_message.msg
     try:
-        response = await rtm_client._web_client.chat_postMessage(
+        response = await SLACK_CLIENT.get("RTMClient")._web_client.chat_postMessage(
             channel=channel,
             text=msg
         )
