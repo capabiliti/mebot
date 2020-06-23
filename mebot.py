@@ -1,27 +1,16 @@
 #! /usr/bin/env python
-
-import asyncio
 import os
 import subprocess
 import yaml
 import uvicorn
-from fastapi import FastAPI
-from pydantic import BaseModel
-from slack.errors import SlackApiError
 
+import mebot.routes
 from mebot.options import cli_args
+from mebot.server import Server
 from mebot.slack_clients.Client import Client
 
+app = Server.APP
 SLACK_CLIENT = Client("RTMClient")
-app = FastAPI()
-class SlackMessage(BaseModel):
-    channel: str
-    msg: str
-
-slack_token = yaml.load(subprocess.check_output(
-    ["blackbox_cat", "secrets/keys.yaml.gpg"],
-    stderr=subprocess.DEVNULL,
-    cwd=os.environ["TP_HOME"]), Loader=yaml.FullLoader)["capabiliti_bot"]["bot_token"]
 
 
 @SLACK_CLIENT.on(event='message')
@@ -47,29 +36,22 @@ async def say_hello(**payload):
             assert e.response["error"]
             print(f"Got an error: {e.response['error']}")
 
+
+@app.on_event('startup')
+def get_slack_key():
+    global SLACK_TOKEN 
+    SLACK_TOKEN = yaml.load(subprocess.check_output(
+        ["blackbox_cat", "secrets/keys.yaml.gpg"],
+        stderr=subprocess.DEVNULL,
+        cwd=os.environ["TP_HOME"]), Loader=yaml.FullLoader)["capabiliti_bot"]["bot_token"]
+
 @app.on_event('startup')
 async def boot_slack():
-    SLACK_CLIENT.start(token=slack_token)
+    SLACK_CLIENT.start(token=SLACK_TOKEN)
 
 @app.on_event('shutdown')
 async def shutdown_slack():
     await SLACK_CLIENT.stop()
-
-@app.post('/msg')
-async def send_to_slack(slack_message: SlackMessage):
-    channel = slack_message.channel
-    msg = slack_message.msg
-    try:
-        response = await SLACK_CLIENT.get("RTMClient")._web_client.chat_postMessage(
-            channel=channel,
-            text=msg
-        )
-        assert response["message"]["text"] == msg
-        return {}
-    except SlackApiError as e:
-        assert e.response["ok"] is False
-        assert e.response["error"]
-        return {}
 
 if __name__ == "__main__":
     uvicorn.run(app, host='localhost', port=int("5000"), log_level="debug")
