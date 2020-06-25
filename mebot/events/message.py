@@ -1,4 +1,4 @@
-from slack import SlackApiError
+from slack.errors import SlackApiError
 from mebot.server import Server
 
 @Server.SLACK_CLIENT.on(event='message')
@@ -6,6 +6,7 @@ async def say_hello(**payload):
     data = payload['data']
     web_client = payload['web_client']
     rtm_client = payload['rtm_client']
+    print(data['text'])
     if 'text' in data and 'Hello' in data.get('text', []):
         channel_id = data['channel']
         thread_ts = data['ts']
