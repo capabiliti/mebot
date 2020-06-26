@@ -1,25 +1,15 @@
 from slack.errors import SlackApiError
 from mebot.server import Server
+from mebot.data import Data
 
 @Server.SLACK_CLIENT.on(event='message')
-async def say_hello(**payload):
+async def relay_messages(**payload):
     data = payload['data']
-    web_client = payload['web_client']
-    rtm_client = payload['rtm_client']
-    if 'text' in data and 'Hello' in data.get('text', []):
-        channel_id = data['channel']
-        thread_ts = data['ts']
-        user = data['user']
-
+    if 'text' in data and 'bot_id' not in data:
         try:
-            response = web_client.chat_postMessage(
-                channel=channel_id,
-                text=f"Hi <@{user}>!",
-                thread_ts=thread_ts
-            )
+            dialogue_id = data['thread_ts'] if 'thread_ts' in data else data['ts']
+            await Data.update_dialogue(dialogue_id, data['text'])
         except SlackApiError as e:
-            # You will get a SlackApiError if "ok" is False
             assert e.response["ok"] is False
-            # str like 'invalid_auth', 'channel_not_found'
             assert e.response["error"]
             print(f"Got an error: {e.response['error']}")

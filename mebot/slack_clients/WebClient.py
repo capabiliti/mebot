@@ -45,8 +45,9 @@ class WebClient(Singleton):
                     thread_ts=thread_id
                 )
             assert response["message"]["text"] == msg
+            response = response["message"]
             return {
-                "dialogue_id": response["ts"]
+                "dialogue_id": response["thread_ts"] if "thread_ts" in response else response["ts"]
             }
         except SlackApiError as e:
             assert e.response["ok"] is False
