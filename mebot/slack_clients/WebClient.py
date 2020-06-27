@@ -3,6 +3,7 @@ from functools import wraps
 from slack import WebClient as SlackWebClient
 from slack.errors import SlackApiError
 
+from mebot.data import Data
 from mebot.utils.Singleton import Singleton
 from mebot.exceptions.MebotException import MebotException
 
@@ -55,9 +56,10 @@ class WebClient(Singleton):
             return {}
 
     @classmethod
-    async def send_to_user(cls, user_id, msg, thread_id = None):
+    async def send_to_user(cls, user, msg, thread_id = None):
         web_client = cls.instance()._client
         try:
+            user_id = Data.get_user_id(user)
             response = await web_client.conversations_open(
                 users = [user_id]
             )
@@ -66,4 +68,9 @@ class WebClient(Singleton):
         except SlackApiError as e:
             assert e.response["ok"] is False
             assert e.response["error"]
+            print(e)
             return {}
+        except MebotException as e:
+            return {
+                "error": str(e)
+            }

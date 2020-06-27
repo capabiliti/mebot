@@ -7,19 +7,17 @@ from mebot.data import Data
 
 async def process_action(websocket, action):
     if action["action"] == "dialogue":
+        user = channel = None
         if "user" in action:
-            user_id = Server.SLACK_USERS[action["user"]]
-            response = await Server.SLACK_CLIENT.send_to_slack(
-                user_id = user_id,
-                msg = action["msg"],
-                thread_id = action.get("dialogue_id", None)
-            )
+            user = action["user"]
         else:
-            response = await Server.SLACK_CLIENT.send_to_slack(
-                channel = action["channel"],
-                msg = action["msg"],
-                thread_id = action.get("dialogue_id", None)
-            )
+            channel = action["channel"]
+        response = await Server.SLACK_CLIENT.send_to_slack(
+            channel = channel,
+            user = user,
+            msg = action["msg"],
+            thread_id = action.get("dialogue_id", None)
+        )
         if "dialogue_id" in response:
             Data.add_dialogue(websocket, response["dialogue_id"])
         return response

@@ -5,6 +5,7 @@ import yaml
 from fastapi import FastAPI
 from mebot.utils.Singleton import Singleton
 from mebot.slack_clients.Client import Client
+from mebot.data import Data
 # from mebot.options import cli_args
 
 
@@ -12,7 +13,6 @@ class Server(Singleton):
     APP = None
     SLACK_CLIENT = None
     SLACK_TOKEN = None
-    SLACK_USERS = {}
 
     def __init__(self):
         super().__init__()
@@ -37,7 +37,7 @@ def get_slack_key():
 async def boot_slack():
     Server.SLACK_CLIENT.start(token=Server.SLACK_TOKEN)
     for response in await Server.SLACK_CLIENT.get("RTMClient")._web_client.users_list(limit=0):
-        Server.SLACK_USERS.update(
+        Data.add_users(
             {member["profile"]["display_name"]: member["id"] for member in response["members"]})
 
 

@@ -39,7 +39,7 @@ class Client:
         return cls._CLIENTS.get(client_type)
     
     @classmethod
-    async def send_to_slack(cls, *, channel=None, user_id=None, thread_id=None, msg):
+    async def send_to_slack(cls, *, channel=None, user=None, thread_id=None, msg):
         if channel:
             return await cls._CLIENT_CLASSES["WebClient"].send_to_channel(
                 channel = channel,
@@ -48,7 +48,7 @@ class Client:
             )
         else:
             return await cls._CLIENT_CLASSES["WebClient"].send_to_user(
-                user_id = user_id,
+                user = user,
                 msg = msg,
                 thread_id = thread_id
             )
