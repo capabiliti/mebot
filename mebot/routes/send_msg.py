@@ -19,5 +19,5 @@ async def send_to_slack(slack_message: SlackMessage):
             msg = msg)
     elif slack_message.user:
         return await Server.SLACK_CLIENT.send_to_slack(
-            user = user,
+            user = slack_message.user,
             msg = msg)
